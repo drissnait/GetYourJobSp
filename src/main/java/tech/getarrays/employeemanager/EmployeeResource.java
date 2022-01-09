@@ -15,6 +15,7 @@ import tech.getarrays.employeemanager.model.EmployeeList;
 import tech.getarrays.employeemanager.service.EmployeeService;
 
 
+import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -85,30 +86,44 @@ public class EmployeeResource {
         return new ResponseEntity<>(employees, HttpStatus.OK);
     }
 
+    public static void write(String s) throws IOException {
+        try {
+            FileWriter fw = new FileWriter("data.txt", true);
+            PrintWriter pw = new PrintWriter(fw);
+            pw.print(s);
+
+            pw.close();
+            fw.close();
+        }catch (IOException e){
+            e.printStackTrace();
+        }
+    }
+
     @PostMapping("/inscription")
-    public ResponseEntity<Employee> addEmployee(@RequestBody Employee employee){
+    public ResponseEntity<Employee> addEmployee(@RequestBody Employee employee) throws IOException {
         Employee newEmployee=employeeService.addEmployee(employee);
         employe1=employee;
         printTaille();
         int nouvelleTaille=getTaille()+1;
         setTaille(nouvelleTaille);
-        //printTaille();
-        //emp.adresse="a";
-        //doChange(x);
+        System.out.println(employee.getStatutnumber());
+        if(employee.getStatutnumber()==1){
+            write(employee.getEmail()+","+employee.getDomaineRecherche()+"\n");
+        }
         setEmployeCourant(employee);
         sendMail();
         return new ResponseEntity<>(newEmployee, HttpStatus.CREATED);
     }
 
     @EventListener(ApplicationReadyEvent.class)
-    public void sendMail(){
+    public void sendMail() throws IOException {
         Employee employe=getEmployeCourant();
         if(tailleCheck<taille && employe.getStatutnumber()==2) {
             String sujet = "Inscription GetYourJob";
             String mailContenu="Bonjour,\n\n Vous venez de vous inscrire dans l'application GetYourJob, " +
                     "votre profil est transmis aux recruteurs de votre domaine, vos informations sont les " +
-                    "suivantes;\n\n" +
-                    "Nom :" +employe.getNom()+
+                    "suivantes :\n\n" +
+                    "Nom : " +employe.getNom()+
                     "\nPrenom : " +employe.getPrenom() +
                     "\nAdresse : " + employe.getAdresse()+
                     "\nEmail : " + employe.getEmail()+
@@ -116,14 +131,57 @@ public class EmployeeResource {
                     "\nDomaine de recherche : "+employe.getDomaineRecherche()+
                     "\nVous êtes : " + employe.getStatut() +
                     "\nNuméro de téléphone : " + employe.getNumTelephone()+
-                    "\n Compétences : " + employe.getCompetences() +
-                    "\n\n Vous recevrez des réponses de la part des recruteurs si votre profil" +
+                    "\nCompétences : " + employe.getCompetences() +
+                    "\n\nVous recevrez des réponses de la part des recruteurs si votre profil" +
                     "satisfait leurs besoins, veuillez donc surveiller votre boîte mail\n\nCordialement,\n\nL'équipe " +
                     "GetYourJob";
 
             senderService.sendEmail(employe.getEmail(), sujet, mailContenu);
+            BufferedReader br=new BufferedReader(new FileReader("data.txt"));
+            String st;
+            while ((st = br.readLine()) != null){
+                String[] strArr = st.split("\\,");
+                if(strArr[1].equals(employe.getDomaineRecherche())==true) {
+                    sujet = "GetYourJob - Candidat dans votre domaine de recherche";
+                    mailContenu="Bonjour,\n\n un candidat est à la recherche de travail dans votre" +
+                            "domaine de recherche potentiel, ci-dessous ses informations :\n\n" +
+                            "Nom : " +employe.getNom()+
+                            "\nPrenom : " +employe.getPrenom() +
+                            "\nAdresse : " + employe.getAdresse()+
+                            "\nEmail : " + employe.getEmail()+
+                            "\nPoste occupé avant " + employe.getPosteAvant()+
+                            "\nDomaine de recherche : "+employe.getDomaineRecherche()+
+                            "\nVous êtes : " + employe.getStatut() +
+                            "\nNuméro de téléphone : " + employe.getNumTelephone()+
+                            "\nCompétences : " + employe.getCompetences() +
+                            "\n\nN'hésitez pas à contacter la personne en question si son profil" +
+                            "correspond à vos recherches\n\nCordialement,\n\nL'équipe " +
+                            "GetYourJob";
+                    senderService.sendEmail(strArr[0], sujet, mailContenu);
+                }
+            }
             tailleCheck=taille;
         }
+        else if(tailleCheck<taille && employe.getStatutnumber()==1) {
+            String sujet = "Inscription GetYourJob";
+            String mailContenu="Bonjour,\n\n Vous venez de vous inscrire dans l'application GetYourJob, " +
+                    "vous recevrez des mails sur les candidats de votre domaine sur cette adresse mail, vos informations sont les " +
+                    "suivantes : \n\n" +
+                    "Nom : " +employe.getNom()+
+                    "\nPrenom : " +employe.getPrenom() +
+                    "\nAdresse : " + employe.getAdresse()+
+                    "\nEmail : " + employe.getEmail()+
+                    "\nPoste occupé avant " + employe.getPosteAvant()+
+                    "\nDomaine de recherche : "+employe.getDomaineRecherche()+
+                    "\nVous êtes : " + employe.getStatut() +
+                    "\nNuméro de téléphone : " + employe.getNumTelephone()+
+                    "\nCompétences : " + employe.getCompetences() +
+                    "\n\nVeuillez surveiller votre boîte mail\n\nCordialement,\n\nL'équipe " +
+                    "GetYourJob";
+
+            senderService.sendEmail(employe.getEmail(), sujet, mailContenu);
+        }
+
     }
 
 
